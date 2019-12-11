@@ -7,6 +7,12 @@ list<string> lexer(FILE* fp){
     //eldad
     //input : file
     //output : list of all the elements in the file acoording to the rules.
+    cout<< "my fellow amrican"<<endl;
+
+
+
+
+
 }
 
 void parser(list<string> list){
@@ -14,11 +20,12 @@ void parser(list<string> list){
 }
 
 int main(int argc, char* argv[]) {
-    FILE* fp;
+    /*FILE* fp;
     fp = fopen(argv[1],"r");
     list<string> list = lexer(fp);
-    fclose(fp);
+    fclose(fp);*/
 
+    cout<<"hii my nig"<<endl;
 
 
 

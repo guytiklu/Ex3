@@ -1,10 +1,10 @@
-#include <iostream>
 #include <string>
 #include <list>
 #include <unordered_map>
 #include <thread>
 #include <chrono>
 #include <fstream>
+#include <iostream>
 
 using namespace std;
 struct Variable{
@@ -13,7 +13,12 @@ struct Variable{
 };
 class Command {
 public:
-    virtual int execute();
+    virtual int execute(){
+        cout << "base execute" << endl;
+    };
+    ~Command(){
+
+    }
 };
 constexpr unsigned int str2int(const char* str, int h = 0)
 {
@@ -23,12 +28,6 @@ void printList(list<string> list) {
     for (auto v : list)
         std::cout << v << "\n";
 }
-
-list<string> code;
-unordered_map<string,Command> commandsMap;
-unordered_map<string,Variable> localVariables;
-unordered_map<string,string> simVariables;
-
 list<string> lexer(string name){
     list<string> textList;
     fstream fp;
@@ -115,28 +114,26 @@ list<string> lexer(string name){
     return textList;
 }
 
+list<string> code;
+unordered_map<string,Command*> commandsMap;
+unordered_map<string,Variable> localVariables;
+unordered_map<string,string> simVariables;
 
-int main(int argc, char* argv[]) {
-    code = lexer(argv[1]);
-
-    return 0;
-}
-
-void parser(list<string> list){
-    //functions will run across the list and execute the commands.
-}
-
-class OpenServerCommand : public Command {
+class OpenServerCommand : public Command { //fix
 public:
     int execute(){
-
+        code.pop_front();
+        code.pop_front();
+        cout << "open server" << endl;
     }
 };
 
-class ConnectCommand : public Command {
+class ConnectCommand : public Command { //fix
 public:
     int execute(){
-
+        code.pop_front();
+        code.pop_front();
+        cout << "connect" << endl;
     }
 };
 
@@ -224,6 +221,8 @@ public:
             case str2int("/engines/engine/rpm"):
                 simVariables.emplace("engine_rpm",varName);
                 break;
+            default:
+                break;
         }
     }
 };
@@ -248,9 +247,43 @@ public:
     }
 };
 
-class WhileCommand : public Command {
+class WhileCommand : public Command { //fix
 public:
     int execute(){
 
     }
 };
+
+void parser(){
+    while(!code.empty()){
+        Command* c = commandsMap[code.front()];
+        c->execute();
+    }
+
+}
+
+int main(int argc, char* argv[]) {
+    OpenServerCommand c1 = OpenServerCommand();
+    Command& c2 = c1;
+    commandsMap.emplace("openDataServer",&c2);
+    ConnectCommand c3 = ConnectCommand();
+    Command& c4 = c3;
+    commandsMap.emplace("connectControlClient",&c4);
+    VarCommand c5 = VarCommand();
+    Command& c6 = c5;
+    commandsMap.emplace("var", &c6);
+    PrintCommand c7 = PrintCommand();
+    Command& c8 = c7;
+    commandsMap.emplace("Print", &c8);
+    SleepCommand c9 = SleepCommand();
+    Command& c10 = c9;
+    commandsMap.emplace("Sleep", &c10);
+    WhileCommand c11 = WhileCommand();
+    Command& c12 = c11;
+    commandsMap.emplace("while", &c12);
+
+    code = lexer(argv[1]);
+    parser();
+
+    return 0;
+}

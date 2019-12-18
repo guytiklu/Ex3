@@ -7,10 +7,12 @@
 #include <fstream>
 #include <iostream>
 #include "ex1.h"
-#include "Expression.h"
 #include <unistd.h>
 #include <netinet/in.h>
 #include <vector>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
 
 using namespace std;
 struct Var{
@@ -53,6 +55,36 @@ size_t split(const string &txt, vector<string> &strs, char ch)
 
     return strs.size();
 }
+Expression* makeExpression (string str,list<string>code){
+
+    ///in case we want to trasfer a string into an expression:
+    Interpreter* i1 = new Interpreter();
+    Expression* ex = nullptr;
+    ex= i1->interpret(str);
+
+
+    /// in case we want to use Variable:
+
+    Variable *x = new Variable(code.front(), 5.0);
+    ex= nullptr;
+
+    return ex;
+
+
+
+    /// Examples from ex1:
+    /*
+    Variable *x2 = new Variable("x2", 5.0);// x2=5.0
+    Expression* e4 = nullptr;
+    e4 = new Div(x2, new UMinus(new UPlus(new UMinus(x2))));// 10/-(+(-(5)))
+    Interpreter* i1 = new Interpreter();
+    e4 = i1->interpret("-(2*(3+4))");
+    */
+
+
+
+
+}
 
 list<string> lexer(string name){
     list<string> textList;
@@ -67,12 +99,13 @@ list<string> lexer(string name){
 
     for(line; getline( fp, line ); ) // reading line by line the text
     {
-        //string testline= "while rpm <= 750 {";
+        string testline= "var x = 3";
         string word;
         int flag=0;
         int flag2=0;
         int flag3=0;
         int flag4=0;
+        int flag5=0;
         //cout<<line<<endl;
         for (auto x : line)
         {
@@ -81,9 +114,10 @@ list<string> lexer(string name){
                 //cout << word << endl;
                 textList.push_back(word);
                 word = "";
+                flag5=1;
             }
+
             if( x== '\t'){
-                cout<<"let me know you are here"<<endl;
                 continue;
             }
             if(x=='('&&flag2==0){
@@ -111,11 +145,13 @@ list<string> lexer(string name){
                 }
                 else {
                     word = "=";
+
                 }
                 textList.push_back(word);
                 word ="";
                 flag2=1;
                 flag=1;
+                flag5=1;
                 continue;
             }
             if(x=='<'){
@@ -130,7 +166,12 @@ list<string> lexer(string name){
             }
             else
             {
-                word = word + x;
+                if(flag5==1) {
+                    flag5=0;
+                }
+                else{
+                    word = word + x;
+                }
             }
         }
         if(word.compare("")!=0){
@@ -140,13 +181,15 @@ list<string> lexer(string name){
         }
 
     }
-     //printList(textList);
+    //printList(textList);
     return textList;
 }
 
 unordered_map<string,Command*> commandsMap;
 unordered_map<string,Var> localVariables;
 unordered_map<string,Var> simVariables;
+bool connected = false;
+list<string> messagesToServer;
 
 int serverThread(int port){
 //create socket
@@ -177,17 +220,16 @@ int serverThread(int port){
         std::cerr << "Error during listening command" << std::endl;
         return -3;
     } else {
-        std::cout << "Server is now listening ..." << std::endl;
     }
 
     // accepting a client
     int client_socket = accept(socketfd, (struct sockaddr *) &address,(socklen_t *) &address);
-
     if (client_socket == -1) {
         std::cerr << "Error accepting client" << std::endl;
         return -4;
     }
-    //reading from client
+    connected=true;
+
 
     struct Var var0 {0,""};
     simVariables.emplace("/instrumentation/airspeed-indicator/indicated-speed-kt",var0);
@@ -248,8 +290,6 @@ int serverThread(int port){
             values[counter]=x;
             counter++;
         }
-
-
         simVariables["/instrumentation/airspeed-indicator/indicated-speed-kt"].value=stof(values[0]);
         simVariables["/instrumentation/altimeter/indicated-altitude-ft"].value=stof(values[1]);
         simVariables["/instrumentation/altimeter/pressure-alt-ft"].value=stof(values[2]);
@@ -274,12 +314,77 @@ int serverThread(int port){
         simVariables["/controls/engines/engine/throttle"].value=stof(values[21]);
         simVariables["/engines/engine/rpm"].value=stof(values[22]);
 
-        for (auto x : simVariables){
+        /*for (auto x : simVariables){
             cout << x.second.value ;
             cout << ",";
         }
-        cout << endl;
+        cout << endl;*/
     }
+}
+int clientThread(string address1, int port){
+
+    const char * address2 = address1.c_str();
+    //create socket
+    int client_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (client_socket == -1) {
+        //error
+        std::cerr << "Could not create a socket"<<std::endl;
+        return -1;
+    }
+
+    //We need to create a sockaddr obj to hold address of server
+    sockaddr_in address; //in means IP4
+    address.sin_family = AF_INET;//IP4
+    address.sin_addr.s_addr = inet_addr(address2);  //the localhost address
+    address.sin_port = htons(port);
+    //we need to convert our number (both port & localhost)
+    // to a number that the network understands.
+
+    // Requesting a connection with the server on local host with port 8081
+    int is_connect = connect(client_socket, (struct sockaddr *)&address, sizeof(address));
+    if (is_connect == -1) {
+        std::cerr << "Could not connect to host server"<<std::endl;
+        return -2;
+    } else {
+        std::cout<<"Client is now connected to server" <<std::endl;
+    }
+    //if here we made a connection
+
+    while(true){
+        if(!messagesToServer.empty()){
+            string message = messagesToServer.front();
+            message = message + "\r\n";
+            messagesToServer.pop_front();
+            int is_sent = send(client_socket, message.c_str(), message.length(), 0);
+            if (is_sent == -1) {
+                std::cout << "Error sending message in server function" << std::endl;
+            }
+        }
+    }
+}
+void parser(list<string>* code){
+    while(!code->empty()){
+        Command* c = commandsMap[code->front()];
+        if(c!=NULL) {
+            c->execute(code);
+        }
+        else{ // is variable
+            string varName = code->front();
+            code->pop_front();
+            code->pop_front();
+            float value = stof(code->front()); //Expression##########################
+            code->pop_front();
+            localVariables[varName].value = value;
+            string command = "set ";
+            command += localVariables[varName].sim;
+            command += " ";
+            command += to_string(value);
+            messagesToServer.push_front(command);
+            cout <<"command: "<< command << endl;
+
+        }
+    }
+
 }
 
 class OpenServerCommand : public Command { //fix
@@ -289,6 +394,9 @@ public:
         thread tr(serverThread,stoi(code->front()));
         code->pop_front();
         tr.detach();
+        while(!connected){
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
     }
 };
 
@@ -296,31 +404,50 @@ class ConnectCommand : public Command { //fix
 public:
     int execute(list<string>* code){
         code->pop_front();
+        string data = code->front();
         code->pop_front();
-        cout << "connect" << endl;
+        vector<string> data2;
+        split(data,data2,',');
+        string address1 = data2.at(0);
+        int port = stoi(data2.at(1));
+        address1 = address1.substr(1,address1.length()-2);
+
+        thread tr(clientThread,address1,port);
+        tr.detach();
     }
 };
 
-class VarCommand : public Command {
+class VarCommand : public Command { // fix =, maybe make class
 public:
-    int execute(list<string>* code){
+    int execute(list<string>* code) {
+
         code->pop_front();
         string varName = code->front();
         code->pop_front();
         string op = code->front();
         code->pop_front();
-        code->pop_front();
-        string sim = code->front();
-        code->pop_front();
-        struct Var var;
-        if(op.compare("<=")){
-            var = simVariables[sim];
+        string sim;
+        float value;
+        if (op.compare("=") == 0) { //new var
+            sim = localVariables[code->front()].sim;
+            sim = sim.substr(1,sim.length()-2);
+            value = localVariables[code->front()].value;
+            code->pop_front();
+        } else {
+            code->pop_front();
+            sim = code->front();
+            sim = sim.substr(1,sim.length()-2);
+            code->pop_front();
+            value = 0;
+            if (op.compare("<=") == 0) { //pointer to sim var
+                value = simVariables[sim].value;
+            } else { // => // new var
+                value = 0;
+            }
         }
-        else {
-            struct Var var{0, sim};
+        struct Var var{value, sim};
+        localVariables.emplace(varName, var);
         }
-        localVariables.emplace(varName,var);
-    }
 };
 
 class SleepCommand : public Command {
@@ -340,124 +467,96 @@ public:
         string print = code->front();
         code->pop_front();
         cout << print << endl;
+        cout <<"rpm:" << localVariables["rpm"].value << endl;
     }
 };
 
 class WhileCommand : public Command { //fix
 public:
     int execute(list<string>* code){
-        cout<< "im in the while command"<<endl;
-       /* list<string> whileList;
-        /// building the whileList
-        string front= code.front();
-        while(front == "}"){
-            whileList.push_front(code.front());
-            code.pop_front();
-            front= code.front();
-        }
 
-        code.pop_front(); ///poping the "while"
-        string temp = code.front() ;
-        code.pop_front(); ///poping the "var" =rpm
-        string temp1= code.front();
+        /// we will get the equation in the while:
+
+        code->pop_front(); ///poping the "while"
+        string temp = code->front() ;
+        code->pop_front(); ///poping the "var" =rpm
+        string temp1= code->front();
 
 
-        code.pop_front(); ///poping the "sign"
-        string temp2=code.front();
+        code->pop_front(); ///poping the "sign"
+        string temp2=code->front();
         int temp2Length= temp2.size();
         temp2= temp2.substr(0, temp2.size()-1);
 
-        code.pop_front(); ///poping the "right side of the equation"
+        code->pop_front(); ///poping the "right side of the equation"
         string equatoin = temp +temp1 +temp2;
-        cout<<equatoin<<endl; /// printing the equation
 
+
+        list<string> whileList;
+        /// building the whileList
+        string front= code->front();
+        while(front != "}"){
+            whileList.push_back(code->front());
+            code->pop_front();
+            front= code->front();
+        }
+        list<string> tempList=whileList;
         /// now we have commands we need to do inside the while, we put them in a diffrent list
 
-        Variable* leftSideOfTheEquation = new Variable(temp, 3.0);// x2=5.0 ///localVaribals[rpm]
+        Variable* leftSideOfTheEquation = new Variable(temp, localVariables[temp].value);// x2=5.0 ///localVaribals[rpm]
         Variable* rightSideOfTheEquation= new Variable(temp2,stoi(temp2));
 
         const char * c = temp1.c_str();
-        int valueOfSigh= str2int((c));*/
+        int valueOfSigh= str2int((c));
 
-       /* switch(valueOfSigh) {
+        switch(valueOfSigh) {
             case str2int("<=") :
-            cout<<"<="<<endl;
-            while(leftSideOfTheEquation->calculate()<= rightSideOfTheEquation->calculate()){
-                Command* c = commandsMap[code.front()];
-                whileFlag=1;
-                c->execute(whileList);
-                /// x2=5.0 ///localVaribals[rpm]
-            }
-            whileFlag=0;
+                while(leftSideOfTheEquation->calculate()<= rightSideOfTheEquation->calculate()){
+                    parser(&tempList);
+                    tempList=whileList;
+                    break;
+                }
                 break;
             case str2int(">=") :
                 while(leftSideOfTheEquation->calculate()>= rightSideOfTheEquation->calculate()){
-                    Command* c = commandsMap[code.front()];
-                    whileFlag=1;
-                    c->execute(whileList);
-
+                    parser(&tempList);
+                    tempList=whileList;
                 }
-                whileFlag=0;
                 break;
             case str2int("<") :
                 while(leftSideOfTheEquation->calculate()< rightSideOfTheEquation->calculate()){
-                    Command* c = commandsMap[code.front()];
-                    whileFlag=1;
-                    c->execute(whileList);
+                    parser(&tempList);
+                    tempList=whileList;
                 }
-                whileFlag=0;
                 break;
             case str2int(">") :
                 while(leftSideOfTheEquation->calculate()> rightSideOfTheEquation->calculate()){
-                    Command* c = commandsMap[code.front()];
-                    whileFlag=1;
-                    c->execute(whileList);
+                    parser(&tempList);
+                    tempList=whileList;
                 }
-                whileFlag=0;
                 break;
             case str2int("==") :
                 while(leftSideOfTheEquation->calculate()== rightSideOfTheEquation->calculate()){
-                    Command* c = commandsMap[code.front()];
-                    whileFlag=1;
-                    c->execute(whileList);
+                    parser(&tempList);
+                    tempList=whileList;
                 }
-                whileFlag=0;
                 break;
             case str2int("!=") :
                 while(leftSideOfTheEquation->calculate()!= rightSideOfTheEquation->calculate()){
-                    Command* c = commandsMap[code.front()];
-                    whileFlag=1;
-                    c->execute(whileList);
+                    parser(&tempList);
+                    tempList=whileList;
                 }
-                whileFlag=0;
                 break;
 
-            }*/
+        }
+        code->pop_front(); /// getting rid from the }
 
-            //code.pop_front(); /// getting rid from the }
-
-
+        /*messagesToServer.push_front("set controls/flight/rudder -1");
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        messagesToServer.push_front("set controls/flight/rudder 1");
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));*/
     }
 };
-
-void parser(list<string>* code){
-    while(!code->empty()){
-        Command* c = commandsMap[code->front()];
-        if(c!=NULL) {
-            c->execute(code);
-        }
-        else{ // is variable
-            string varName = code->front();
-            code->pop_front();
-            code->pop_front();
-            float value = stof(code->front());
-            code->pop_front();
-            localVariables[varName].value = value;
-        }
-        //functions?
-    }
-
-}
 
 int main(int argc, char* argv[]) {
     OpenServerCommand c1 = OpenServerCommand();

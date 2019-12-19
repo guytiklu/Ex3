@@ -13,6 +13,7 @@
 #include <queue>
 #include <stdlib.h>
 #include <map>
+#include <algorithm>
 
 
 Value::Value() { }

@@ -63,105 +63,6 @@ string removeSpaces(string str)
     return str;
 }
 
-list<string> oldlexer(string name){
-    list<string> textList;
-    fstream fp;
-    fp.open(name);
-    if(!fp){
-        cout << "Unable to open file";
-    }
-    char ch;
-    int i=0;
-    string line;
-
-    for(line; getline( fp, line ); ) // reading line by line the text
-    {
-        string testline= "var x = 3";
-        string word;
-        int flag=0;
-        int flag2=0;
-        int flag3=0;
-        int flag4=0;
-        int flag5=0;
-        //cout<<line<<endl;
-        for (auto x : line)
-        {
-            if (x == ' ' && flag==0 ) /// means we have a space
-            {
-                //cout << word << endl;
-                textList.push_back(word);
-                word = "";
-                flag5=1;
-            }
-
-            if( x== '\t'){
-                continue;
-            }
-            if(x=='('&&flag2==0){
-                //cout << word << endl;
-                textList.push_back(word);
-                word = "";
-                flag=1;
-                continue;
-            }
-            if( x==')'&&flag2==0){
-                textList.push_back(word);
-                word = "";
-                flag=0;
-                continue;
-            }
-            if(x=='='){
-                //cout << word << endl;
-                if(flag3==1){
-                    word= "<=";
-                    flag3=0;
-                }
-                else if(flag4==1){
-                    word= ">=";
-                    flag4=0;
-                }
-                else {
-                    word = "=";
-
-                }
-                textList.push_back(word);
-                word ="";
-                flag2=1;
-                flag=1;
-                flag5=1;
-                continue;
-            }
-            if(x=='<'){
-                flag3=1;
-                word = word + x;
-                continue;
-            }
-            if(x=='>'){
-                flag4=1;
-                word = word + x;
-                continue;
-            }
-            else
-            {
-                if(flag5==1) {
-                    flag5=0;
-                }
-                else{
-                    word = word + x;
-                }
-            }
-        }
-        if(word.compare("")!=0){
-            textList.push_back(word);
-            flag2=0;
-            flag=0;
-        }
-
-    }
-    //printList(textList);
-    return textList;
-}
-
 list<string>lexer(string name){
     list<string> textList;
     fstream fp;
@@ -272,21 +173,15 @@ list<string> messagesToServer;
 
 void createExpression(Expression** exp, string str){
     Interpreter* inter = new Interpreter();
+    cout<<"Pushing variables to expression interpreter:"<<endl;//
     for(auto x : localVariables){
         string setVariable = x.first;
         setVariable += "=";
-        setVariable += to_string(x.second->value);
+        setVariable += to_string((double)x.second->value);
         inter->setVariables(setVariable);
-    }
-    cout<<"1"<<endl;
-    if(localVariables.count("h0")==1) {
-        cout << "h0: " << localVariables["h0"]->value << endl;
-    }
-    if(localVariables.count("heading")==1) {
-        cout << "heading: " << localVariables["heading"]->value << endl;
+        cout<<"Command: "<<setVariable<<endl;//
     }
     *exp=inter->interpret(str);
-    cout<<"2"<<endl;
 }
 int serverThread(int port){
 //create socket
@@ -465,21 +360,18 @@ int clientThread(string address1, int port){
 void parser(list<string>* code){
     while(!code->empty()){
         Command* c = commandsMap[code->front()];
-        cout<<code->front()<<endl;
+        cout<<code->front()<<endl; //print command
         if(c!=NULL) {
             c->execute(code);
         }
         else{ // is variable
             string varName = code->front();
-            cout<<"var name: "<<varName<<endl;//
             code->pop_front();
             code->pop_front();
             Expression* exp = nullptr;
-            createExpression(&exp,code->front());
-            cout<<"expression: "<<code->front()<<endl;//
+            createExpression(&exp,code->front()); //##################################
             code->pop_front();
             float value = exp->calculate();
-            cout<<"calculate: "<<exp->calculate()<<endl;
             localVariables[varName]->value = value;
             string command = "set ";
             command += localVariables[varName]->sim;
@@ -501,7 +393,7 @@ public:
         string pop = code->front();
         Expression* exp = nullptr;
         createExpression(&exp,pop);
-        thread tr(serverThread,exp->calculate()); //expression
+        thread tr(serverThread,exp->calculate());
         code->pop_front();
         tr.detach();
         while(!connected){

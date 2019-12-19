@@ -269,6 +269,30 @@ int serverThread(int port){
     simVariables.emplace("/engines/engine/rpm",var22);
     struct Var var23 {0,"/instrumentation/heading-indicator/offset-deg"};
     simVariables.emplace("/instrumentation/heading-indicator/offset-deg",var23);
+    struct Var var24 {0,"/sim/time/warp"};
+    simVariables.emplace("/sim/time/warp",var24);
+    struct Var var25 {0,"/controls/switches/magnetos"};
+    simVariables.emplace("/controls/switches/magnetos",var25);
+    struct Var var26 {0,"/controls/engines/current-engine/throttle"};
+    simVariables.emplace("/controls/engines/current-engine/throttle",var26);
+    struct Var var27 {0,"/controls/switches/master-avionics"};
+    simVariables.emplace("/controls/switches/master-avionics",var27);
+    struct Var var28 {0,"/controls/switches/starter"};
+    simVariables.emplace("/controls/switches/starter",var28);
+    struct Var var29 {0,"/engines/active-engine/auto-start"};
+    simVariables.emplace("/engines/active-engine/auto-start",var29);
+    struct Var var30 {0,"/controls/flight/speedbrake"};
+    simVariables.emplace("/controls/flight/speedbrake",var30);
+    struct Var var31 {0,"/sim/model/c172p/brake-parking"};
+    simVariables.emplace("/sim/model/c172p/brake-parking",var31);
+    struct Var var32 {0,"/controls/engines/engine/primer"};
+    simVariables.emplace("/controls/engines/engine/primer",var32);
+    struct Var var33 {0,"/controls/engines/current-engine/mixture"};
+    simVariables.emplace("/controls/engines/current-engine/mixture",var33);
+    struct Var var34 {0,"/controls/switches/master-bat"};
+    simVariables.emplace("/controls/switches/master-bat",var34);
+    struct Var var35 {0,"/controls/switches/master-alt"};
+    simVariables.emplace("/controls/switches/master-alt",var35);
 
     while (true) {
         char buffer[1024] = {0};
@@ -276,36 +300,48 @@ int serverThread(int port){
 
         vector<string> v;
         split( buffer, v, ',');
-        string values[24];
+        string values[36];
         int counter=0;
         for (auto x : v){
             values[counter]=x;
             counter++;
         }
         simVariables["/instrumentation/airspeed-indicator/indicated-speed-kt"].value=stof(values[0]);
-        simVariables["/instrumentation/heading-indicator/offset-deg"].value=stof(values[1]);
-        simVariables["/instrumentation/altimeter/indicated-altitude-ft"].value=stof(values[2]);
-        simVariables["/instrumentation/altimeter/pressure-alt-ft"].value=stof(values[3]);
-        simVariables["/instrumentation/attitude-indicator/indicated-pitch-deg"].value=stof(values[4]);
-        simVariables["/instrumentation/attitude-indicator/indicated-roll-deg"].value=stof(values[5]);
-        simVariables["/instrumentation/attitude-indicator/internal-pitch-deg"].value=stof(values[6]);
-        simVariables["/instrumentation/attitude-indicator/internal-roll-deg"].value=stof(values[7]);
-        simVariables["/instrumentation/encoder/indicated-altitude-ft"].value=stof(values[8]);
-        simVariables["/instrumentation/encoder/pressure-alt-ft"].value=stof(values[9]);
-        simVariables["/instrumentation/gps/indicated-altitude-ft"].value=stof(values[10]);
-        simVariables["/instrumentation/gps/indicated-ground-speed-kt"].value=stof(values[11]);
-        simVariables["/instrumentation/gps/indicated-vertical-speed"].value=stof(values[12]);
-        simVariables["/instrumentation/heading-indicator/indicated-heading-deg"].value=stof(values[13]);
-        simVariables["/instrumentation/magnetic-compass/indicated-heading-deg"].value=stof(values[14]);
-        simVariables["/instrumentation/slip-skid-ball/indicated-slip-skid"].value=stof(values[15]);
-        simVariables["/instrumentation/turn-indicator/indicated-turn-rate"].value=stof(values[16]);
-        simVariables["/instrumentation/vertical-speed-indicator/indicated-speed-fpm"].value=stof(values[17]);
-        simVariables["/controls/flight/aileron"].value=stof(values[18]);
-        simVariables["/controls/flight/elevator"].value=stof(values[19]);
-        simVariables["/controls/flight/rudder"].value=stof(values[20]);
-        simVariables["/controls/flight/flaps"].value=stof(values[21]);
-        simVariables["/controls/engines/engine/throttle"].value=stof(values[22]);
-        simVariables["/engines/engine/rpm"].value=stof(values[23]);
+        simVariables["/sim/time/warp"].value=stof(values[1]);
+        simVariables["/controls/switches/magnetos"].value=stof(values[2]);
+        simVariables["/instrumentation/heading-indicator/offset-deg"].value=stof(values[3]);
+        simVariables["/instrumentation/altimeter/indicated-altitude-ft"].value=stof(values[4]);
+        simVariables["/instrumentation/altimeter/pressure-alt-ft"].value=stof(values[5]);
+        simVariables["/instrumentation/attitude-indicator/indicated-pitch-deg"].value=stof(values[6]);
+        simVariables["/instrumentation/attitude-indicator/indicated-roll-deg"].value=stof(values[7]);
+        simVariables["/instrumentation/attitude-indicator/internal-pitch-deg"].value=stof(values[8]);
+        simVariables["/instrumentation/attitude-indicator/internal-roll-deg"].value=stof(values[9]);
+        simVariables["/instrumentation/encoder/indicated-altitude-ft"].value=stof(values[10]);
+        simVariables["/instrumentation/encoder/pressure-alt-ft"].value=stof(values[11]);
+        simVariables["/instrumentation/gps/indicated-altitude-ft"].value=stof(values[12]);
+        simVariables["/instrumentation/gps/indicated-ground-speed-kt"].value=stof(values[13]);
+        simVariables["/instrumentation/gps/indicated-vertical-speed"].value=stof(values[14]);
+        simVariables["/instrumentation/heading-indicator/indicated-heading-deg"].value=stof(values[15]);
+        simVariables["/instrumentation/magnetic-compass/indicated-heading-deg"].value=stof(values[16]);
+        simVariables["/instrumentation/slip-skid-ball/indicated-slip-skid"].value=stof(values[17]);
+        simVariables["/instrumentation/turn-indicator/indicated-turn-rate"].value=stof(values[18]);
+        simVariables["/instrumentation/vertical-speed-indicator/indicated-speed-fpm"].value=stof(values[19]);
+        simVariables["/controls/flight/aileron"].value=stof(values[20]);
+        simVariables["/controls/flight/elevator"].value=stof(values[21]);
+        simVariables["/controls/flight/rudder"].value=stof(values[22]);
+        simVariables["/controls/flight/flaps"].value=stof(values[23]);
+        simVariables["/controls/engines/engine/throttle"].value=stof(values[24]);
+        simVariables["/controls/engines/current-engine/throttle"].value=stof(values[25]);
+        simVariables["/controls/switches/master-avionics"].value=stof(values[26]);
+        simVariables["/controls/switches/starter"].value=stof(values[27]);
+        simVariables["/engines/active-engine/auto-start"].value=stof(values[28]);
+        simVariables["/controls/flight/speedbrake"].value=stof(values[29]);
+        simVariables["/sim/model/c172p/brake-parking"].value=stof(values[30]);
+        simVariables["/controls/engines/engine/primer"].value=stof(values[31]);
+        simVariables["/controls/engines/current-engine/mixture"].value=stof(values[32]);
+        simVariables["/controls/switches/master-bat"].value=stof(values[33]);
+        simVariables["/controls/switches/master-alt"].value=stof(values[34]);
+        simVariables["/engines/engine/rpm"].value=stof(values[35]);
 
         /*for (auto x : simVariables){
             cout << x.second.value ;
@@ -460,7 +496,6 @@ public:
         int timeToSleep = exp->calculate();
         code->pop_front();
         std::this_thread::sleep_for(std::chrono::milliseconds(timeToSleep));
-        cout<<"omo"<<endl;
     }
 };
 

@@ -12,6 +12,8 @@
 #include <vector>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <mutex>
+#include <algorithm>
 
 
 using namespace std;
@@ -55,38 +57,13 @@ size_t split(const string &txt, vector<string> &strs, char ch)
 
     return strs.size();
 }
-Expression* makeExpression (string str,list<string>code){
-
-    ///in case we want to trasfer a string into an expression:
-    Interpreter* i1 = new Interpreter();
-    Expression* ex = nullptr;
-    ex= i1->interpret(str);
-
-
-    /// in case we want to use Variable:
-
-    Variable *x = new Variable(code.front(), 5.0);
-    ex= nullptr;
-
-    return ex;
-
-
-
-    /// Examples from ex1:
-    /*
-    Variable *x2 = new Variable("x2", 5.0);// x2=5.0
-    Expression* e4 = nullptr;
-    e4 = new Div(x2, new UMinus(new UPlus(new UMinus(x2))));// 10/-(+(-(5)))
-    Interpreter* i1 = new Interpreter();
-    e4 = i1->interpret("-(2*(3+4))");
-    */
-
-
-
-
+string removeSpaces(string str)
+{
+    str.erase(remove(str.begin(), str.end(), ' '), str.end());
+    return str;
 }
 
-list<string> lexer(string name){
+list<string> oldlexer(string name){
     list<string> textList;
     fstream fp;
     fp.open(name);
@@ -185,12 +162,132 @@ list<string> lexer(string name){
     return textList;
 }
 
+list<string>lexer(string name){
+    list<string> textList;
+    fstream fp;
+    fp.open(name);
+    string line;
+    if(!fp){
+        cout << "Unable to open file";
+    }
+    for(line; getline( fp, line ); ){ /// reading line by line the text
+        string testline;
+        string word;
+        testline= removeSpaces(testline);
+        int flag=0;
+        int flag1=0;
+        int flag2=0;
+        int flagprint=0;
+
+
+        for (auto x : line){ /// now we will read letter by letter
+            if((x=='('|| x== ')')&&flag2==0){
+                if(x=='('&&word.length()!=0) {
+                    textList.push_back(word);
+                    word = "";
+                }
+                else if(x==')'){
+                    textList.push_back(word);
+                    word = "";
+                }
+            }
+            else if(x=='='){
+                flag2=1;
+                if(word.length()==0) {
+                    word = '=';
+                    textList.push_back(word);
+                    word = "";
+                }
+                else if(word.length()==1){
+                    word= word+x;
+                    textList.push_back(word);
+                    word = "";
+                }
+                else{
+                    textList.push_back(word);
+                    word= '=';
+                    textList.push_back(word);
+                    word="";
+
+                }
+            }
+            else if(x==' ' && flag==0 &&flag2==0){
+                if(word.length()!=0) {
+                    textList.push_back(word);
+                    word = "";
+                }
+            }
+            else if(x==' ' && flag==0 &&flag2==1){
+                continue;
+            }
+            else if(x==','){
+                textList.push_back(word);
+                word="";
+            }
+            else if(x=='"'&& flagprint==1){
+                word = word + x;
+                flag=1;
+            }
+            else if(x=='"'&& flag==0){ /// for the first "
+                word="";
+                flag=1;
+            }
+            else if(x=='"'&& flag==1){ /// for the second "
+                flag=0;
+            }
+            else if(x=='\t'){
+                continue;
+            }
+            else if(x=='{'){
+                continue;
+            }
+
+            else {
+                word = word + x;
+            }
+            if(textList.size()!=0){
+                string front= textList.back();
+                if(front=="Print"){
+                    flagprint=1;
+                }
+            }
+
+        }
+        if(word.length()!=0) {
+            textList.push_back(word);
+            word = "";
+        }
+    }
+
+    printList(textList);
+    return textList;
+}
+
+mutex mutexlock;
 unordered_map<string,Command*> commandsMap;
-unordered_map<string,Var> localVariables;
+unordered_map<string,Var*> localVariables;
 unordered_map<string,Var> simVariables;
 bool connected = false;
 list<string> messagesToServer;
 
+void createExpression(Expression** exp, string str){
+    Interpreter* inter = new Interpreter();
+    for(auto x : localVariables){
+        string setVariable = x.first;
+        setVariable += "=";
+        setVariable += to_string(x.second->value);
+        inter->setVariables(setVariable);
+    }
+    cout<<"1"<<endl;
+    if(localVariables.count("h0")==1) {
+        cout << "h0: " << localVariables["h0"]->value << endl;
+    }
+    if(localVariables.count("heading")==1) {
+        cout << "heading: " << localVariables["heading"]->value << endl;
+    }
+    *exp=inter->interpret(str);
+    cout<<"2"<<endl;
+}
 int serverThread(int port){
 //create socket
     int socketfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -230,53 +327,54 @@ int serverThread(int port){
     }
     connected=true;
 
-
-    struct Var var0 {0,""};
+    struct Var var0 {0,"/instrumentation/airspeed-indicator/indicated-speed-kt"};
     simVariables.emplace("/instrumentation/airspeed-indicator/indicated-speed-kt",var0);
-    struct Var var1 {0,""};
+    struct Var var1 {0,"/instrumentation/altimeter/indicated-altitude-ft"};
     simVariables.emplace("/instrumentation/altimeter/indicated-altitude-ft",var1);
-    struct Var var2 {0,""};
+    struct Var var2 {0,"/instrumentation/altimeter/pressure-alt-ft"};
     simVariables.emplace("/instrumentation/altimeter/pressure-alt-ft",var2);
-    struct Var var3 {0,""};
+    struct Var var3 {0,"/instrumentation/attitude-indicator/indicated-pitch-deg"};
     simVariables.emplace("/instrumentation/attitude-indicator/indicated-pitch-deg",var3);
-    struct Var var4 {0,""};
+    struct Var var4 {0,"/instrumentation/attitude-indicator/indicated-roll-deg"};
     simVariables.emplace("/instrumentation/attitude-indicator/indicated-roll-deg",var4);
-    struct Var var5 {0,""};
+    struct Var var5 {0,"/instrumentation/attitude-indicator/internal-pitch-deg"};
     simVariables.emplace("/instrumentation/attitude-indicator/internal-pitch-deg",var5);
-    struct Var var6 {0,""};
+    struct Var var6 {0,"/instrumentation/attitude-indicator/internal-roll-deg"};
     simVariables.emplace("/instrumentation/attitude-indicator/internal-roll-deg",var6);
-    struct Var var7 {0,""};
+    struct Var var7 {0,"/instrumentation/encoder/indicated-altitude-ft"};
     simVariables.emplace("/instrumentation/encoder/indicated-altitude-ft",var7);
-    struct Var var8 {0,""};
+    struct Var var8 {0,"/instrumentation/encoder/pressure-alt-ft"};
     simVariables.emplace("/instrumentation/encoder/pressure-alt-ft",var8);
-    struct Var var9 {0,""};
+    struct Var var9 {0,"/instrumentation/gps/indicated-altitude-ft"};
     simVariables.emplace("/instrumentation/gps/indicated-altitude-ft",var9);
-    struct Var var10 {0,""};
+    struct Var var10 {0,"/instrumentation/gps/indicated-ground-speed-kt"};
     simVariables.emplace("/instrumentation/gps/indicated-ground-speed-kt",var10);
-    struct Var var11 {0,""};
+    struct Var var11 {0,"/instrumentation/gps/indicated-vertical-speed"};
     simVariables.emplace("/instrumentation/gps/indicated-vertical-speed",var11);
-    struct Var var12 {0,""};
+    struct Var var12 {0,"/instrumentation/heading-indicator/indicated-heading-deg"};
     simVariables.emplace("/instrumentation/heading-indicator/indicated-heading-deg",var12);
-    struct Var var13 {0,""};
+    struct Var var13 {0,"/instrumentation/magnetic-compass/indicated-heading-deg"};
     simVariables.emplace("/instrumentation/magnetic-compass/indicated-heading-deg",var13);
-    struct Var var14 {0,""};
+    struct Var var14 {0,"/instrumentation/slip-skid-ball/indicated-slip-skid"};
     simVariables.emplace("/instrumentation/slip-skid-ball/indicated-slip-skid",var14);
-    struct Var var15 {0,""};
+    struct Var var15 {0,"/instrumentation/turn-indicator/indicated-turn-rate"};
     simVariables.emplace("/instrumentation/turn-indicator/indicated-turn-rate",var15);
-    struct Var var16 {0,""};
+    struct Var var16 {0,"/instrumentation/vertical-speed-indicator/indicated-speed-fpm"};
     simVariables.emplace("/instrumentation/vertical-speed-indicator/indicated-speed-fpm",var16);
-    struct Var var17 {0,""};
+    struct Var var17 {0,"/controls/flight/aileron"};
     simVariables.emplace("/controls/flight/aileron",var17);
-    struct Var var18 {0,""};
+    struct Var var18 {0,"/controls/flight/elevator"};
     simVariables.emplace("/controls/flight/elevator",var18);
-    struct Var var19 {0,""};
+    struct Var var19 {0,"/controls/flight/rudder"};
     simVariables.emplace("/controls/flight/rudder",var19);
-    struct Var var20 {0,""};
+    struct Var var20 {0,"/controls/flight/flaps"};
     simVariables.emplace("/controls/flight/flaps",var20);
-    struct Var var21 {0,""};
+    struct Var var21 {0,"/controls/engines/engine/throttle"};
     simVariables.emplace("/controls/engines/engine/throttle",var21);
-    struct Var var22 {0,""};
+    struct Var var22 {0,"/engines/engine/rpm"};
     simVariables.emplace("/engines/engine/rpm",var22);
+    struct Var var23 {0,"/instrumentation/heading-indicator/offset-deg"};
+    simVariables.emplace("/instrumentation/heading-indicator/offset-deg",var23);
 
     while (true) {
         char buffer[1024] = {0};
@@ -284,35 +382,36 @@ int serverThread(int port){
 
         vector<string> v;
         split( buffer, v, ',');
-        string values[23];
+        string values[24];
         int counter=0;
         for (auto x : v){
             values[counter]=x;
             counter++;
         }
         simVariables["/instrumentation/airspeed-indicator/indicated-speed-kt"].value=stof(values[0]);
-        simVariables["/instrumentation/altimeter/indicated-altitude-ft"].value=stof(values[1]);
-        simVariables["/instrumentation/altimeter/pressure-alt-ft"].value=stof(values[2]);
-        simVariables["/instrumentation/attitude-indicator/indicated-pitch-deg"].value=stof(values[3]);
-        simVariables["/instrumentation/attitude-indicator/indicated-roll-deg"].value=stof(values[4]);
-        simVariables["/instrumentation/attitude-indicator/internal-pitch-deg"].value=stof(values[5]);
-        simVariables["/instrumentation/attitude-indicator/internal-roll-deg"].value=stof(values[6]);
-        simVariables["/instrumentation/encoder/indicated-altitude-ft"].value=stof(values[7]);
-        simVariables["/instrumentation/encoder/pressure-alt-ft"].value=stof(values[8]);
-        simVariables["/instrumentation/gps/indicated-altitude-ft"].value=stof(values[9]);
-        simVariables["/instrumentation/gps/indicated-ground-speed-kt"].value=stof(values[10]);
-        simVariables["/instrumentation/gps/indicated-vertical-speed"].value=stof(values[11]);
-        simVariables["/instrumentation/heading-indicator/indicated-heading-deg"].value=stof(values[12]);
-        simVariables["/instrumentation/magnetic-compass/indicated-heading-deg"].value=stof(values[13]);
-        simVariables["/instrumentation/slip-skid-ball/indicated-slip-skid"].value=stof(values[14]);
-        simVariables["/instrumentation/turn-indicator/indicated-turn-rate"].value=stof(values[15]);
-        simVariables["/instrumentation/vertical-speed-indicator/indicated-speed-fpm"].value=stof(values[16]);
-        simVariables["/controls/flight/aileron"].value=stof(values[17]);
-        simVariables["/controls/flight/elevator"].value=stof(values[18]);
-        simVariables["/controls/flight/rudder"].value=stof(values[19]);
-        simVariables["/controls/flight/flaps"].value=stof(values[20]);
-        simVariables["/controls/engines/engine/throttle"].value=stof(values[21]);
-        simVariables["/engines/engine/rpm"].value=stof(values[22]);
+        simVariables["/instrumentation/heading-indicator/offset-deg"].value=stof(values[1]);
+        simVariables["/instrumentation/altimeter/indicated-altitude-ft"].value=stof(values[2]);
+        simVariables["/instrumentation/altimeter/pressure-alt-ft"].value=stof(values[3]);
+        simVariables["/instrumentation/attitude-indicator/indicated-pitch-deg"].value=stof(values[4]);
+        simVariables["/instrumentation/attitude-indicator/indicated-roll-deg"].value=stof(values[5]);
+        simVariables["/instrumentation/attitude-indicator/internal-pitch-deg"].value=stof(values[6]);
+        simVariables["/instrumentation/attitude-indicator/internal-roll-deg"].value=stof(values[7]);
+        simVariables["/instrumentation/encoder/indicated-altitude-ft"].value=stof(values[8]);
+        simVariables["/instrumentation/encoder/pressure-alt-ft"].value=stof(values[9]);
+        simVariables["/instrumentation/gps/indicated-altitude-ft"].value=stof(values[10]);
+        simVariables["/instrumentation/gps/indicated-ground-speed-kt"].value=stof(values[11]);
+        simVariables["/instrumentation/gps/indicated-vertical-speed"].value=stof(values[12]);
+        simVariables["/instrumentation/heading-indicator/indicated-heading-deg"].value=stof(values[13]);
+        simVariables["/instrumentation/magnetic-compass/indicated-heading-deg"].value=stof(values[14]);
+        simVariables["/instrumentation/slip-skid-ball/indicated-slip-skid"].value=stof(values[15]);
+        simVariables["/instrumentation/turn-indicator/indicated-turn-rate"].value=stof(values[16]);
+        simVariables["/instrumentation/vertical-speed-indicator/indicated-speed-fpm"].value=stof(values[17]);
+        simVariables["/controls/flight/aileron"].value=stof(values[18]);
+        simVariables["/controls/flight/elevator"].value=stof(values[19]);
+        simVariables["/controls/flight/rudder"].value=stof(values[20]);
+        simVariables["/controls/flight/flaps"].value=stof(values[21]);
+        simVariables["/controls/engines/engine/throttle"].value=stof(values[22]);
+        simVariables["/engines/engine/rpm"].value=stof(values[23]);
 
         /*for (auto x : simVariables){
             cout << x.second.value ;
@@ -346,16 +445,17 @@ int clientThread(string address1, int port){
         std::cerr << "Could not connect to host server"<<std::endl;
         return -2;
     } else {
-        std::cout<<"Client is now connected to server" <<std::endl;
     }
     //if here we made a connection
 
     while(true){
         if(!messagesToServer.empty()){
+            mutexlock.lock();
             string message = messagesToServer.front();
             message = message + "\r\n";
             messagesToServer.pop_front();
             int is_sent = send(client_socket, message.c_str(), message.length(), 0);
+            mutexlock.unlock();
             if (is_sent == -1) {
                 std::cout << "Error sending message in server function" << std::endl;
             }
@@ -365,33 +465,43 @@ int clientThread(string address1, int port){
 void parser(list<string>* code){
     while(!code->empty()){
         Command* c = commandsMap[code->front()];
+        cout<<code->front()<<endl;
         if(c!=NULL) {
             c->execute(code);
         }
         else{ // is variable
             string varName = code->front();
+            cout<<"var name: "<<varName<<endl;//
             code->pop_front();
             code->pop_front();
-            float value = stof(code->front()); //Expression##########################
+            Expression* exp = nullptr;
+            createExpression(&exp,code->front());
+            cout<<"expression: "<<code->front()<<endl;//
             code->pop_front();
-            localVariables[varName].value = value;
+            float value = exp->calculate();
+            cout<<"calculate: "<<exp->calculate()<<endl;
+            localVariables[varName]->value = value;
             string command = "set ";
-            command += localVariables[varName].sim;
+            command += localVariables[varName]->sim;
             command += " ";
             command += to_string(value);
+            cout<<command<<endl;
+            mutexlock.lock();
             messagesToServer.push_front(command);
-            cout <<"command: "<< command << endl;
-
+            mutexlock.unlock();
         }
     }
 
 }
 
-class OpenServerCommand : public Command { //fix
+class OpenServerCommand : public Command {
 public:
     int execute(list<string>* code) {
         code->pop_front();
-        thread tr(serverThread,stoi(code->front()));
+        string pop = code->front();
+        Expression* exp = nullptr;
+        createExpression(&exp,pop);
+        thread tr(serverThread,exp->calculate()); //expression
         code->pop_front();
         tr.detach();
         while(!connected){
@@ -404,14 +514,12 @@ class ConnectCommand : public Command { //fix
 public:
     int execute(list<string>* code){
         code->pop_front();
-        string data = code->front();
+        string address1 = code->front();
         code->pop_front();
-        vector<string> data2;
-        split(data,data2,',');
-        string address1 = data2.at(0);
-        int port = stoi(data2.at(1));
-        address1 = address1.substr(1,address1.length()-2);
-
+        Expression* exp = nullptr;
+        createExpression(&exp,code->front());
+        int port = (int)exp->calculate();
+        code->pop_front();
         thread tr(clientThread,address1,port);
         tr.detach();
     }
@@ -428,24 +536,27 @@ public:
         code->pop_front();
         string sim;
         float value;
+        Var* var;
         if (op.compare("=") == 0) { //new var
-            sim = localVariables[code->front()].sim;
-            sim = sim.substr(1,sim.length()-2);
-            value = localVariables[code->front()].value;
+            sim = localVariables[code->front()]->sim;
+            value = localVariables[code->front()]->value;
             code->pop_front();
+            var = new Var();
+            var->sim=sim;
+            var->value=value;
         } else {
             code->pop_front();
             sim = code->front();
-            sim = sim.substr(1,sim.length()-2);
             code->pop_front();
             value = 0;
-            if (op.compare("<=") == 0) { //pointer to sim var
-                value = simVariables[sim].value;
-            } else { // => // new var
-                value = 0;
+            if (op.compare("<-") == 0) { //pointer to sim var X
+                var = &simVariables[sim];
+            } else { // -> // new var X
+                var = new Var();
+                var->value=0;
+                var->sim=sim;
             }
         }
-        struct Var var{value, sim};
         localVariables.emplace(varName, var);
         }
 };
@@ -466,31 +577,33 @@ public:
         code->pop_front();
         string print = code->front();
         code->pop_front();
-        cout << print << endl;
-        cout <<"rpm:" << localVariables["rpm"].value << endl;
+        if(print.at(0)=='"'){ //tziteta
+            cout<<print<<endl;
+        } else { //expression
+            Expression* exp = nullptr;
+            createExpression(&exp,print);
+            cout<<exp->calculate()<<endl;
+        }
     }
 };
 
-class WhileCommand : public Command { //fix
+class WhileCommand : public Command {
 public:
     int execute(list<string>* code){
 
         /// we will get the equation in the while:
 
         code->pop_front(); ///poping the "while"
-        string temp = code->front() ;
+        string left = code->front() ;
         code->pop_front(); ///poping the "var" =rpm
-        string temp1= code->front();
-
+        string op= code->front();
 
         code->pop_front(); ///poping the "sign"
-        string temp2=code->front();
-        int temp2Length= temp2.size();
-        temp2= temp2.substr(0, temp2.size()-1);
+        string right=code->front();
+        int temp2Length= right.size();
 
         code->pop_front(); ///poping the "right side of the equation"
-        string equatoin = temp +temp1 +temp2;
-
+        string equatoin = left +op +right;
 
         list<string> whileList;
         /// building the whileList
@@ -503,10 +616,12 @@ public:
         list<string> tempList=whileList;
         /// now we have commands we need to do inside the while, we put them in a diffrent list
 
-        Variable* leftSideOfTheEquation = new Variable(temp, localVariables[temp].value);// x2=5.0 ///localVaribals[rpm]
-        Variable* rightSideOfTheEquation= new Variable(temp2,stoi(temp2));
+        Expression* leftSideOfTheEquation = nullptr;
+        createExpression(&leftSideOfTheEquation,left);
+        Expression* rightSideOfTheEquation = nullptr;
+        createExpression(&rightSideOfTheEquation,right);
 
-        const char * c = temp1.c_str();
+        const char * c = op.c_str();
         int valueOfSigh= str2int((c));
 
         switch(valueOfSigh) {
@@ -514,37 +629,48 @@ public:
                 while(leftSideOfTheEquation->calculate()<= rightSideOfTheEquation->calculate()){
                     parser(&tempList);
                     tempList=whileList;
-                    break;
+                    createExpression(&leftSideOfTheEquation,left);
+                    createExpression(&rightSideOfTheEquation,right);
                 }
                 break;
             case str2int(">=") :
                 while(leftSideOfTheEquation->calculate()>= rightSideOfTheEquation->calculate()){
                     parser(&tempList);
                     tempList=whileList;
+                    createExpression(&leftSideOfTheEquation,left);
+                    createExpression(&rightSideOfTheEquation,right);
                 }
                 break;
             case str2int("<") :
                 while(leftSideOfTheEquation->calculate()< rightSideOfTheEquation->calculate()){
                     parser(&tempList);
                     tempList=whileList;
+                    createExpression(&leftSideOfTheEquation,left);
+                    createExpression(&rightSideOfTheEquation,right);
                 }
                 break;
             case str2int(">") :
                 while(leftSideOfTheEquation->calculate()> rightSideOfTheEquation->calculate()){
                     parser(&tempList);
                     tempList=whileList;
+                    createExpression(&leftSideOfTheEquation,left);
+                    createExpression(&rightSideOfTheEquation,right);
                 }
                 break;
             case str2int("==") :
                 while(leftSideOfTheEquation->calculate()== rightSideOfTheEquation->calculate()){
                     parser(&tempList);
                     tempList=whileList;
+                    createExpression(&leftSideOfTheEquation,left);
+                    createExpression(&rightSideOfTheEquation,right);
                 }
                 break;
             case str2int("!=") :
                 while(leftSideOfTheEquation->calculate()!= rightSideOfTheEquation->calculate()){
                     parser(&tempList);
                     tempList=whileList;
+                    createExpression(&leftSideOfTheEquation,left);
+                    createExpression(&rightSideOfTheEquation,right);
                 }
                 break;
 

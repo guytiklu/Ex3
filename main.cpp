@@ -160,7 +160,7 @@ list<string>lexer(string name){
         }
     }
 
-    printList(textList);
+    //printList(textList);
     return textList;
 }
 
@@ -173,13 +173,11 @@ list<string> messagesToServer;
 
 void createExpression(Expression** exp, string str){
     Interpreter* inter = new Interpreter();
-    cout<<"Pushing variables to expression interpreter:"<<endl;//
     for(auto x : localVariables){
         string setVariable = x.first;
         setVariable += "=";
         setVariable += to_string((double)x.second->value);
         inter->setVariables(setVariable);
-        cout<<"Command: "<<setVariable<<endl;//
     }
     *exp=inter->interpret(str);
 }
@@ -214,6 +212,7 @@ int serverThread(int port){
     } else {
     }
 
+    cout<< "Waiting for server to connect . . ."<<endl;
     // accepting a client
     int client_socket = accept(socketfd, (struct sockaddr *) &address,(socklen_t *) &address);
     if (client_socket == -1) {
@@ -340,6 +339,7 @@ int clientThread(string address1, int port){
         std::cerr << "Could not connect to host server"<<std::endl;
         return -2;
     } else {
+        cout<<"Connected to server!"<<endl;
     }
     //if here we made a connection
 
@@ -360,7 +360,6 @@ int clientThread(string address1, int port){
 void parser(list<string>* code){
     while(!code->empty()){
         Command* c = commandsMap[code->front()];
-        cout<<code->front()<<endl; //print command
         if(c!=NULL) {
             c->execute(code);
         }
@@ -377,7 +376,6 @@ void parser(list<string>* code){
             command += localVariables[varName]->sim;
             command += " ";
             command += to_string(value);
-            cout<<command<<endl;
             mutexlock.lock();
             messagesToServer.push_front(command);
             mutexlock.unlock();
@@ -457,7 +455,9 @@ class SleepCommand : public Command {
 public:
     int execute(list<string>* code){
         code->pop_front();
-        int timeToSleep = stoi(code->front());
+        Expression* exp = nullptr;
+        createExpression(&exp,code->front());
+        int timeToSleep = exp->calculate();
         code->pop_front();
         std::this_thread::sleep_for(std::chrono::milliseconds(timeToSleep));
     }

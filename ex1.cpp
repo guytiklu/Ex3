@@ -555,6 +555,9 @@ int Interpreter::isOperator(string x)
             return 1;
             break;
         case '-':
+            if(x.length()>1){
+                break;
+            }
             return 2;
             break;
         case '*':
@@ -624,8 +627,19 @@ int Interpreter::possibleNum(string val) {
 
 bool Interpreter::is_number(const std::string& s)
 {
-    char* end = 0;
-    double val = strtod(s.c_str(), &end);
-    return end != s.c_str() && *end == '\0' && val != 99999;
+    bool pointFound = false;
+    for(int i=0; i<s.length(); i++){
+        if(isdigit(s[i])==0){
+            if(i==0 && s[0]=='-') {
+                continue;
+            }
+            else if(s[i]=='.' && !pointFound){
+                pointFound=true;
+            }
+            else {
+                return false;
+            }
+        }
+    }
+    return true;
 }
-

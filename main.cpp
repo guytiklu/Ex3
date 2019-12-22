@@ -504,9 +504,10 @@ public:
     int execute(list<string>* code){
         code->pop_front();
         string print = code->front();
+
         code->pop_front();
         if(print.at(0)=='"'){ //tziteta
-            cout<<print<<endl;
+            cout<<print.substr(1,print.length()-2)<<endl;
         } else { //expression
             Expression* exp = nullptr;
             createExpression(&exp,print);
@@ -612,6 +613,94 @@ public:
     }
 };
 
+class IfCommand : public Command {
+public:
+    int execute(list<string>* code){
+
+        /// we will get the equation in the if:
+
+        code->pop_front(); ///poping the "if"
+        string left = code->front() ;
+        code->pop_front(); ///poping the "var"
+        string op= code->front();
+
+        code->pop_front(); ///poping the "sign"
+        string right=code->front();
+        int temp2Length= right.size();
+
+        code->pop_front(); ///poping the "right side of the equation"
+        string equatoin = left +op +right;
+
+        list<string> ifList;
+        /// building the ifList
+        string front= code->front();
+        while(front != "}"){
+            ifList.push_back(code->front());
+            code->pop_front();
+            front= code->front();
+        }
+        Expression* leftSideOfTheEquation = nullptr;
+        createExpression(&leftSideOfTheEquation,left);
+        Expression* rightSideOfTheEquation = nullptr;
+        createExpression(&rightSideOfTheEquation,right);
+
+        const char * c = op.c_str();
+        int valueOfSigh= str2int((c));
+
+        switch(valueOfSigh) {
+            case str2int("<=") :
+                if(leftSideOfTheEquation->calculate()<= rightSideOfTheEquation->calculate()){
+                    parser(&ifList);
+                    createExpression(&leftSideOfTheEquation,left);
+                    createExpression(&rightSideOfTheEquation,right);
+                }
+                break;
+            case str2int(">=") :
+                if(leftSideOfTheEquation->calculate()>= rightSideOfTheEquation->calculate()){
+                    parser(&ifList);
+                    createExpression(&leftSideOfTheEquation,left);
+                    createExpression(&rightSideOfTheEquation,right);
+                }
+                break;
+            case str2int("<") :
+                if(leftSideOfTheEquation->calculate()< rightSideOfTheEquation->calculate()){
+                    parser(&ifList);
+                    createExpression(&leftSideOfTheEquation,left);
+                    createExpression(&rightSideOfTheEquation,right);
+                }
+                break;
+            case str2int(">") :
+                if(leftSideOfTheEquation->calculate()> rightSideOfTheEquation->calculate()){
+                    parser(&ifList);
+                    createExpression(&leftSideOfTheEquation,left);
+                    createExpression(&rightSideOfTheEquation,right);
+                }
+                break;
+            case str2int("==") :
+                if(leftSideOfTheEquation->calculate()== rightSideOfTheEquation->calculate()){
+                    parser(&ifList);
+                    createExpression(&leftSideOfTheEquation,left);
+                    createExpression(&rightSideOfTheEquation,right);
+                }
+                break;
+            case str2int("!=") :
+                if(leftSideOfTheEquation->calculate()!= rightSideOfTheEquation->calculate()){
+                    parser(&ifList);
+                    createExpression(&leftSideOfTheEquation,left);
+                    createExpression(&rightSideOfTheEquation,right);
+                }
+                break;
+
+        }
+        code->pop_front(); /// getting rid from the }
+
+        /*messagesToServer.push_front("set controls/flight/rudder -1");
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        messagesToServer.push_front("set controls/flight/rudder 1");
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));*/
+    }
+};
+
 int main(int argc, char* argv[]) {
     OpenServerCommand c1 = OpenServerCommand();
     Command& c2 = c1;
@@ -631,6 +720,9 @@ int main(int argc, char* argv[]) {
     WhileCommand c11 = WhileCommand();
     Command& c12 = c11;
     commandsMap.emplace("while", &c12);
+    IfCommand c13 = IfCommand();
+    Command& c14 = c13;
+    commandsMap.emplace("if", &c14);
 
     list<string> code = lexer(argv[1]);
     parser(&code);

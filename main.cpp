@@ -93,6 +93,7 @@ list<string>lexer(string name){
                 continue;
             }
 
+
             if((x=='('|| x== ')')&&flag2==0){
                 if(x=='('&&word.length()!=0) {
                     textList.push_back(word);
@@ -188,6 +189,7 @@ list<string>lexer(string name){
     }
 
     printList(textList);
+    fp.close();
     return textList;
 }
 
@@ -196,6 +198,7 @@ unordered_map<string,Command*> commandsMap;
 unordered_map<string,Var*> localVariables;
 unordered_map<string,Var> simVariables;
 bool connected = false;
+bool progEnded = false;
 list<string> messagesToServer;
 
 void createExpression(Expression** exp, string str){
@@ -321,7 +324,7 @@ int serverThread(int port){
     struct Var var35 {0,"/controls/switches/master-alt"};
     simVariables.emplace("/controls/switches/master-alt",var35);
 
-    while (true) {
+    while (true && !progEnded) {
         char buffer[1024] = {0};
         int valread = read(client_socket, buffer, 1024);
 
@@ -370,12 +373,9 @@ int serverThread(int port){
         simVariables["/controls/switches/master-alt"].value=stof(values[34]);
         simVariables["/engines/engine/rpm"].value=stof(values[35]);
 
-        /*for (auto x : simVariables){
-            cout << x.second.value ;
-            cout << ",";
-        }
-        cout << endl;*/
+
     }
+    close(socketfd);
 }
 int clientThread(string address1, int port){
 
@@ -406,7 +406,7 @@ int clientThread(string address1, int port){
     }
     //if here we made a connection
 
-    while(true){
+    while(true && !progEnded){
         if(!messagesToServer.empty()){
             mutexlock.lock();
             string message = messagesToServer.front();
@@ -419,6 +419,7 @@ int clientThread(string address1, int port){
             }
         }
     }
+    close(client_socket);
 }
 void parser(list<string>* code){
     while(!code->empty()){
@@ -553,6 +554,10 @@ public:
         string left = code->front() ;
         code->pop_front(); ///poping the "var" =rpm
         string op= code->front();
+        if(op== "="){
+            code->pop_front();
+            op = "==";
+        }
 
         code->pop_front(); ///poping the "sign"
         string right=code->front();
@@ -579,6 +584,9 @@ public:
 
         const char * c = op.c_str();
         int valueOfSigh= str2int((c));
+
+        double x1,x2;
+        int y1,y2;
 
         switch(valueOfSigh) {
             case str2int("<=") :
@@ -614,7 +622,13 @@ public:
                 }
                 break;
             case str2int("==") :
-                while(leftSideOfTheEquation->calculate()== rightSideOfTheEquation->calculate()){
+                x1 = leftSideOfTheEquation->calculate();
+                x2 = rightSideOfTheEquation->calculate();
+                x1=x1*1000000;
+                x2=x2*1000000;
+                y1= (int)x1;
+                y2= (int)x2;
+                while(y1==y2 || abs(y1-y2)==1){
                     parser(&tempList);
                     tempList=whileList;
                     createExpression(&leftSideOfTheEquation,left);
@@ -622,7 +636,13 @@ public:
                 }
                 break;
             case str2int("!=") :
-                while(leftSideOfTheEquation->calculate()!= rightSideOfTheEquation->calculate()){
+                x1 = leftSideOfTheEquation->calculate();
+                x2 = rightSideOfTheEquation->calculate();
+                x1=x1*1000000;
+                x2=x2*1000000;
+                y1= (int)x1;
+                y2= (int)x2;
+                while(!(y1==y2 || abs(y1-y2)==1)){
                     parser(&tempList);
                     tempList=whileList;
                     createExpression(&leftSideOfTheEquation,left);
@@ -646,6 +666,10 @@ public:
         string left = code->front() ;
         code->pop_front(); ///poping the "var"
         string op= code->front();
+        if(op== "="){
+            code->pop_front();
+            op = "==";
+        }
 
         code->pop_front(); ///poping the "sign"
         string right=code->front();
@@ -669,7 +693,10 @@ public:
 
         const char * c = op.c_str();
         int valueOfSigh= str2int((c));
-
+        double x1;
+        double x2;
+        int y1;
+        int y2;
         switch(valueOfSigh) {
             case str2int("<=") :
                 if(leftSideOfTheEquation->calculate()<= rightSideOfTheEquation->calculate()){
@@ -700,14 +727,28 @@ public:
                 }
                 break;
             case str2int("==") :
-                if(leftSideOfTheEquation->calculate()== rightSideOfTheEquation->calculate()){
+                cout<< leftSideOfTheEquation->calculate()<< endl;
+                cout<< rightSideOfTheEquation->calculate()<<endl;
+                 x1 = leftSideOfTheEquation->calculate();
+                 x2 = rightSideOfTheEquation->calculate();
+                 x1=x1*1000000;
+                 x2=x2*1000000;
+                 y1= (int)x1;
+                 y2= (int)x2;
+                if(y1==y2 || abs(y1-y2)==1){
                     parser(&ifList);
                     createExpression(&leftSideOfTheEquation,left);
                     createExpression(&rightSideOfTheEquation,right);
                 }
                 break;
             case str2int("!=") :
-                if(leftSideOfTheEquation->calculate()!= rightSideOfTheEquation->calculate()){
+                x1 = leftSideOfTheEquation->calculate();
+                x2 = rightSideOfTheEquation->calculate();
+                x1=x1*1000000;
+                x2=x2*1000000;
+                y1= (int)x1;
+                y2= (int)x2;
+                if(!(y1==y2 || abs(y1-y2)==1)){
                     parser(&ifList);
                     createExpression(&leftSideOfTheEquation,left);
                     createExpression(&rightSideOfTheEquation,right);
@@ -746,9 +787,9 @@ int main(int argc, char* argv[]) {
     IfCommand c13 = IfCommand();
     Command& c14 = c13;
     commandsMap.emplace("if", &c14);
-
     list<string> code = lexer(argv[1]);
     parser(&code);
+    progEnded = true;
 
     return 0;
 

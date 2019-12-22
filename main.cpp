@@ -119,15 +119,26 @@ list<string>lexer(string name){
                     continue;
                 }
                 if(x=='('&&word.length()!=0) {
-                    textList.push_back(word);
-                    word = "";
+                    parnthesisCounter++;
+                    if(parnthesisCounter==1) {
+                        textList.push_back(word);
+                        word = "";
+                    }
+                    else{
+                        word= word+x;
+                    }
                 }
                 else if(x==')'){
-                    textList.push_back(word);
-                    word = "";
+                    parnthesisCounter--;
+                    if(parnthesisCounter==0) {
+                        textList.push_back(word);
+                        word = "";
+                    }
+                    else{
+                        word= word+x;
+                    }
                 }
             }
-
             else if ((x=='<'|| x=='>' || x=='!') && word!= "-" ){
                 if(flagprint==1){
                     word= word+x;

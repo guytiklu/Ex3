@@ -79,9 +79,20 @@ list<string>lexer(string name){
         int flag1=0;
         int flag2=0;
         int flagprint=0;
+        int WhileandIfFlag=0;
+        int signflag=0;
 
 
         for (auto x : line){ /// now we will read letter by letter
+            if(WhileandIfFlag==1 && x==' '){
+                continue;
+            }
+            if((word ==">" || word == "<") &&( x !='=' )&& x != '-' ){
+                textList.push_back(word);
+                word=x;
+                continue;
+            }
+
             if((x=='('|| x== ')')&&flag2==0){
                 if(x=='('&&word.length()!=0) {
                     textList.push_back(word);
@@ -90,6 +101,19 @@ list<string>lexer(string name){
                 else if(x==')'){
                     textList.push_back(word);
                     word = "";
+                }
+            }
+            else if ((x=='<'|| x=='>' || x=='!') && word!= "-" ){
+                if(word != " " ) {
+                    if(word == ""){
+                        word = x;
+                        signflag = 1;
+                    }
+                    else {
+                        textList.push_back(word);
+                        word = x;
+                        signflag = 1;
+                    }
                 }
             }
             else if(x=='='){
@@ -112,13 +136,13 @@ list<string>lexer(string name){
 
                 }
             }
-            else if(x==' ' && flag==0 &&flag2==0){
+            else if(x==' ' && flag==0 && flag2==0){
                 if(word.length()!=0) {
                     textList.push_back(word);
                     word = "";
                 }
             }
-            else if(x==' ' && flag==0 &&flag2==1){
+            else if(x==' ' && flag==0 &&flag2==1 ){
                 continue;
             }
             else if(x==','){
@@ -151,6 +175,9 @@ list<string>lexer(string name){
                 if(front=="Print"){
                     flagprint=1;
                 }
+                else if(front== "while"||front== "if" ){
+                    WhileandIfFlag=1;
+                }
             }
 
         }
@@ -160,7 +187,7 @@ list<string>lexer(string name){
         }
     }
 
-    //printList(textList);
+    printList(textList);
     return textList;
 }
 
@@ -606,10 +633,6 @@ public:
         }
         code->pop_front(); /// getting rid from the }
 
-        /*messagesToServer.push_front("set controls/flight/rudder -1");
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        messagesToServer.push_front("set controls/flight/rudder 1");
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));*/
     }
 };
 

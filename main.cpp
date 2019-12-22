@@ -75,15 +75,36 @@ list<string>lexer(string name){
         string testline;
         string word;
         testline= removeSpaces(testline);
-        int flag=0;
+        int tzitetaFlag=0;
         int flag1=0;
         int flag2=0;
         int flagprint=0;
         int WhileandIfFlag=0;
         int signflag=0;
-
+        int noNeedSpacesFlag=0;
+        int parnthesisFlag=0;
+        int tzitFlag=0;
+        int parnthesisCounter=0;
 
         for (auto x : line){ /// now we will read letter by letter
+            if(x=='('){
+                parnthesisFlag=1;
+            }
+            if(x=='"'&& tzitFlag==1){ /// second "
+                tzitFlag=0;
+            }
+            else if(x=='"'){ ///first "
+                tzitFlag=1;
+            }
+            if(parnthesisFlag==1 && tzitFlag==0){
+                noNeedSpacesFlag=1;
+            }
+            if(parnthesisFlag==1 && tzitFlag==1){
+                noNeedSpacesFlag=0;
+            }
+            if(x==' '&& noNeedSpacesFlag==1){
+                continue;
+            }
             if(WhileandIfFlag==1 && x==' '){
                 continue;
             }
@@ -92,9 +113,11 @@ list<string>lexer(string name){
                 word=x;
                 continue;
             }
-
-
             if((x=='('|| x== ')')&&flag2==0){
+                if(flagprint==1 && tzitFlag==1){
+                    word= word+x;
+                    continue;
+                }
                 if(x=='('&&word.length()!=0) {
                     textList.push_back(word);
                     word = "";
@@ -104,7 +127,12 @@ list<string>lexer(string name){
                     word = "";
                 }
             }
+
             else if ((x=='<'|| x=='>' || x=='!') && word!= "-" ){
+                if(flagprint==1){
+                    word= word+x;
+                    continue;
+                }
                 if(word != " " ) {
                     if(word == ""){
                         word = x;
@@ -118,6 +146,10 @@ list<string>lexer(string name){
                 }
             }
             else if(x=='='){
+                if(flagprint==1){
+                    word= word+x;
+                    continue;
+                }
                 flag2=1;
                 if(word.length()==0) {
                     word = '=';
@@ -137,37 +169,45 @@ list<string>lexer(string name){
 
                 }
             }
-            else if(x==' ' && flag==0 && flag2==0){
+            else if(x==' ' && tzitetaFlag==0 && flag2==0 && noNeedSpacesFlag==0 ){
                 if(word.length()!=0) {
                     textList.push_back(word);
                     word = "";
                 }
             }
-            else if(x==' ' && flag==0 &&flag2==1 ){
+            else if(x==' ' && tzitetaFlag==0 &&flag2==1 && noNeedSpacesFlag==0){
                 continue;
             }
             else if(x==','){
+                if(flagprint==1){
+                    word= word+x;
+                    continue;
+                }
+                noNeedSpacesFlag=1;
                 textList.push_back(word);
                 word="";
             }
             else if(x=='"'&& flagprint==1){
                 word = word + x;
-                flag=1;
+                tzitetaFlag=1;
             }
-            else if(x=='"'&& flag==0){ /// for the first "
+            else if(x=='"'&& tzitetaFlag==0){ /// for the first "
                 word="";
-                flag=1;
+                tzitetaFlag=1;
             }
-            else if(x=='"'&& flag==1){ /// for the second "
-                flag=0;
+            else if(x=='"'&& tzitetaFlag==1){ /// for the second "
+                tzitetaFlag=0;
             }
             else if(x=='\t'){
                 continue;
             }
             else if(x=='{'){
+                if(flagprint==1){
+                    word= word+x;
+                    continue;
+                }
                 continue;
             }
-
             else {
                 word = word + x;
             }

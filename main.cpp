@@ -239,7 +239,7 @@ list<string>lexer(string name){
         }
     }
 
-    printList(textList);
+    //printList(textList);
     fp.close();
     return textList;
 }
@@ -563,7 +563,7 @@ public:
             }
         }
         localVariables.emplace(varName, var);
-        }
+    }
 };
 
 class SleepCommand : public Command {
@@ -778,14 +778,12 @@ public:
                 }
                 break;
             case str2int("==") :
-                cout<< leftSideOfTheEquation->calculate()<< endl;
-                cout<< rightSideOfTheEquation->calculate()<<endl;
-                 x1 = leftSideOfTheEquation->calculate();
-                 x2 = rightSideOfTheEquation->calculate();
-                 x1=x1*1000000;
-                 x2=x2*1000000;
-                 y1= (int)x1;
-                 y2= (int)x2;
+                x1 = leftSideOfTheEquation->calculate();
+                x2 = rightSideOfTheEquation->calculate();
+                x1=x1*1000000;
+                x2=x2*1000000;
+                y1= (int)x1;
+                y2= (int)x2;
                 if(y1==y2 || abs(y1-y2)==1){
                     parser(&ifList);
                     createExpression(&leftSideOfTheEquation,left);
@@ -841,7 +839,7 @@ int main(int argc, char* argv[]) {
     list<string> code = lexer(argv[1]);
     parser(&code);
     progEnded = true;
-
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     return 0;
 
 }

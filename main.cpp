@@ -378,6 +378,12 @@ int serverThread(int port){
     while (true && !progEnded) {
         char buffer[1024] = {0};
         int valread = read(client_socket, buffer, 1024);
+        string str = buffer;
+        int findN = str.find('\n');
+        if(findN==string::npos){
+            continue;
+        }
+        buffer[findN]='\0';
 
         vector<string> v;
         split( buffer, v, ',');

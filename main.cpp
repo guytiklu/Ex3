@@ -675,8 +675,8 @@ public:
             case str2int("==") :
                 x1 = leftSideOfTheEquation->calculate();
                 x2 = rightSideOfTheEquation->calculate();
-                x1=x1*1000000;
-                x2=x2*1000000;
+                x1=x1*100000;
+                x2=x2*100000;
                 y1= (int)x1;
                 y2= (int)x2;
                 while(y1==y2 || abs(y1-y2)==1){
@@ -689,8 +689,8 @@ public:
             case str2int("!=") :
                 x1 = leftSideOfTheEquation->calculate();
                 x2 = rightSideOfTheEquation->calculate();
-                x1=x1*1000000;
-                x2=x2*1000000;
+                x1=x1*100000;
+                x2=x2*100000;
                 y1= (int)x1;
                 y2= (int)x2;
                 while(!(y1==y2 || abs(y1-y2)==1)){
@@ -780,8 +780,8 @@ public:
             case str2int("==") :
                 x1 = leftSideOfTheEquation->calculate();
                 x2 = rightSideOfTheEquation->calculate();
-                x1=x1*1000000;
-                x2=x2*1000000;
+                x1=x1*100000;
+                x2=x2*100000;
                 y1= (int)x1;
                 y2= (int)x2;
                 if(y1==y2 || abs(y1-y2)==1){
@@ -793,8 +793,8 @@ public:
             case str2int("!=") :
                 x1 = leftSideOfTheEquation->calculate();
                 x2 = rightSideOfTheEquation->calculate();
-                x1=x1*1000000;
-                x2=x2*1000000;
+                x1=x1*100000;
+                x2=x2*100000;
                 y1= (int)x1;
                 y2= (int)x2;
                 if(!(y1==y2 || abs(y1-y2)==1)){
